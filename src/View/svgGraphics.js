@@ -191,6 +191,10 @@ function svgGraphics() {
             return actualScale;
         },
 
+        getScale : function(){
+            return actualScale;
+        },
+
         resetScale : function () {
             actualScale = 1;
             var transform = "matrix(1, 0, 0, 1, 0, 0)";

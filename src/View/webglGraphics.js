@@ -277,6 +277,10 @@ function webglGraphics(options) {
             return transform[0];
         },
 
+        getScale : function(){
+            return transform[0];
+        },
+
         resetScale : function () {
             resetScaleInternal();
 
