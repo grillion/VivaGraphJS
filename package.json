@@ -9,7 +9,8 @@
   "scripts": {
     "start": "gulp",
     "test": "tap test/*.js",
-    "release": "gulp release"
+    "release": "gulp release",
+    "demos": "serve ."
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
     "gulp-uglify": "^1.0.2",
     "gulp-util": "^3.0.2",
     "ngraph.remove-overlaps": "^1.0.0",
+    "serve": "^10.0.2",
     "tap": "^0.4.13",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.0.0"
