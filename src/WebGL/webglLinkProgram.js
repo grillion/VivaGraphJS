@@ -38,6 +38,7 @@ function webglLinkProgram() {
 
         program,
         gl,
+        glAliasedLineWidthRange,
         buffer,
         utils,
         locations,
@@ -70,6 +71,7 @@ function webglLinkProgram() {
     return {
         load : function (glContext) {
             gl = glContext;
+            glAliasedLineWidthRange = gl.getParameter( gl.ALIASED_LINE_WIDTH_RANGE)[1];
             utils = glUtils(glContext);
 
             program = utils.createProgram(linksVS, linksFS);
@@ -135,6 +137,8 @@ function webglLinkProgram() {
             gl.vertexAttribPointer(locations.vertexPos, 2, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
             gl.vertexAttribPointer(locations.color, 4, gl.UNSIGNED_BYTE, true, 3 * Float32Array.BYTES_PER_ELEMENT, 2 * 4);
 
+            // grillion - set to 2 if available
+            gl.lineWidth((glAliasedLineWidthRange > 1) ? 2 : 1);
             gl.drawArrays(gl.LINES, 0, linksCount * 2);
 
             frontLinkId = linksCount - 1;
