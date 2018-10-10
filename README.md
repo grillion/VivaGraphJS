@@ -1,3 +1,16 @@
+Fork of Vivagraph
+==================================================
+To significantly and quickly improve this great library, I have forked VivaGraph.
+
+What I've changed:
+
+* Fixed caching logic to actually cache images in the textureAtlas.
+* Reduced the size of the textureAtlas textures(sig memory performance gains) generated
+* Made links in webGL graph thicker if computer's webGL supports it
+* Increased input size of webGL image nodes. It was 32px, it's now 256x256px
+* Changed renderer.zoomIn and zoomOut methods to handle zoomIn and zoomOut internally
+* Disabled node removal on webGL image node object. Node removal is stacking images together rather than deleting them from the webGL texture
+
 VivaGraph [![Build Status](https://travis-ci.org/anvaka/VivaGraphJS.svg)](https://travis-ci.org/anvaka/VivaGraphJS)
 ==================================================
 **VivaGraphJS** is designed to be extensible and to support different
