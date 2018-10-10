@@ -189,9 +189,9 @@ function webglInputEvents(webglGraphics) {
 
         if (node && lastFound !== node) {
           lastFound = node;
-          cancelBubble = cancelBubble || invoke(mouseEnterCallback, [lastFound]);
+          cancelBubble = cancelBubble || invoke(mouseEnterCallback, [lastFound,e]);
         } else if (node === null && lastFound !== node) {
-          cancelBubble = cancelBubble || invoke(mouseLeaveCallback, [lastFound]);
+          cancelBubble = cancelBubble || invoke(mouseLeaveCallback, [lastFound,e]);
           lastFound = null;
         }
 
