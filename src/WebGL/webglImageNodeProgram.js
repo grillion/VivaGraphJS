@@ -18,7 +18,7 @@ function webglImageNodeProgram() {
   var ATTRIBUTES_PER_PRIMITIVE = 18;
   var nodesFS = createNodeFragmentShader();
   var nodesVS = createNodeVertexShader();
-  var tilesPerTexture = 1024; // TODO: Get based on max texture size
+  var tilesPerTexture = 64; // TODO: Get based on max texture size
   var atlas;
   var program;
   var gl;
@@ -26,6 +26,7 @@ function webglImageNodeProgram() {
   var utils;
   var locations;
   var nodesCount = 0;
+  var imageReuse = {};
   var nodes = new Float32Array(64);
   var width;
   var height;
@@ -141,8 +142,10 @@ function webglImageNodeProgram() {
     var coordinates = atlas.getCoordinates(ui.src);
     if (coordinates) {
       ui._offset = coordinates.offset;
+      imageReuse[ui.src] = 1;
     } else {
       ui._offset = 0;
+      imageReuse[ui.src] = imageReuse[ui.src] + 1;
       // Image is not yet loaded into the atlas. Reload it:
       atlas.load(ui.src, function(coordinates) {
         ui._offset = coordinates.offset;
@@ -155,10 +158,18 @@ function webglImageNodeProgram() {
       nodesCount -= 1;
     }
 
-    if (nodeUI.id < nodesCount && nodesCount > 0) {
-      if (nodeUI.src) {
-        atlas.remove(nodeUI.src);
+    if (nodeUI.src) {
+      imageReuse[nodeUI.src] = imageReuse[nodeUI.src] - 1;
+      if(imageReuse[nodeUI.src] === 0){
+        //atlas.remove(nodeUI.src);
       }
+    }
+
+    //grillion - this is broken
+    if (nodeUI.id < nodesCount && nodesCount > 0) {
+      // if (nodeUI.src) {
+      //   atlas.remove(nodeUI.src);
+      // }
 
       utils.copyArrayPart(nodes, nodeUI.id * ATTRIBUTES_PER_PRIMITIVE, nodesCount * ATTRIBUTES_PER_PRIMITIVE, ATTRIBUTES_PER_PRIMITIVE);
     }

@@ -12,7 +12,7 @@ module.exports = webglAtlas;
  */
 function webglAtlas(tilesPerTexture) {
   var tilesPerRow = Math.sqrt(tilesPerTexture || 1024) << 0,
-    tileSize = tilesPerRow,
+    tileSize = 256, // grillion - changed from tilesPerRow value
     lastLoadedIdx = 1,
     loadedImages = {},
     dirtyTimeoutId,
@@ -117,6 +117,12 @@ function webglAtlas(tilesPerTexture) {
 
       lastLoadedIdx += 1;
       img.crossOrigin = "anonymous";
+
+      // grillion - use object
+      loadedImages[imgUrl] = {
+        offset: imgId
+      };
+
       img.onload = function() {
         markDirty();
         drawAt(imgId, img, callback);
@@ -126,9 +132,19 @@ function webglAtlas(tilesPerTexture) {
     }
   }
 
-  function createTexture() {
+  // grillion - deprecated version
+  // function createTexture() {
+  //   var texture = new Texture(tilesPerRow * tileSize);
+  //   textures.push(texture);
+  // }
+  // updated version can specify index
+  function createTexture(index) {
     var texture = new Texture(tilesPerRow * tileSize);
-    textures.push(texture);
+    if(index === undefined){
+      textures.push(texture);
+    }else{
+      textures[index] = texture;
+    }
   }
 
   function drawAt(tileNumber, img, callback) {
@@ -137,15 +153,22 @@ function webglAtlas(tilesPerTexture) {
         offset: tileNumber
       };
 
-    if (tilePosition.textureNumber >= textures.length) {
-      createTexture();
+    // grillion - deprecated version
+    // if (tilePosition.textureNumber >= textures.length) {
+    //   createTexture();
+    // }
+    // new version reuses images
+    loadedImages[img.src] = coordinates;
+    if (textures[tilePosition.textureNumber] === undefined) {
+      createTexture(tilePosition.textureNumber);
     }
     var currentTexture = textures[tilePosition.textureNumber];
 
     currentTexture.ctx.drawImage(img, tilePosition.col * tileSize, tilePosition.row * tileSize, tileSize, tileSize);
     trackedUrls[tileNumber] = img.src;
 
-    loadedImages[img.src] = coordinates;
+    // grillion - deprecated
+    //loadedImages[img.src] = coordinates;
     currentTexture.isDirty = true;
 
     callback(coordinates);
@@ -190,7 +213,8 @@ function webglAtlas(tilesPerTexture) {
       toCtx = textures[to.textureNumber].ctx,
       x = to.col * tileSize,
       y = to.row * tileSize;
-
+    
+    //this is broken and is writing over images with transparency and stacking images
     toCtx.drawImage(fromCanvas, from.col * tileSize, from.row * tileSize, tileSize, tileSize, x, y, tileSize, tileSize);
     textures[from.textureNumber].isDirty = true;
     textures[to.textureNumber].isDirty = true;

@@ -129,12 +129,16 @@ function renderer(graph, settings) {
       return this;
     },
 
-    zoomOut: function() {
-      return scale(true);
+    scale: function(inOut){
+      return scale(inOut);
     },
 
-    zoomIn: function() {
-      return scale(false);
+    zoomOut: function(desiredScale) {
+      return zoomOut(desiredScale);
+    },
+
+    zoomIn: function(desiredScale) {
+      return zoomIn(desiredScale);
     },
 
     /**
@@ -488,5 +492,25 @@ function renderer(graph, settings) {
 
     layout.dispose();
     releaseDom();
+  }
+
+  function zoomOut(desiredScale) {
+    var currentScale = graphics.getScale();
+    if (desiredScale < currentScale && currentScale > 0.12) {
+      setTimeout(function () {
+        scale(true);
+        this.zoomOut(desiredScale);
+      }, 16);
+    }
+  }
+
+  function zoomIn(desiredScale) {
+    var currentScale = graphics.getScale();
+    if (desiredScale < currentScale && currentScale > 0.12) {
+      setTimeout(function () {
+        scale(false);
+        this.zoomIn(desiredScale);
+      }, 16);
+    }
   }
 }

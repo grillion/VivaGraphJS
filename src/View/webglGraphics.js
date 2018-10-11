@@ -258,6 +258,10 @@ function webglGraphics(options) {
         },
 
         scale : function (scaleFactor, scrollPoint) {
+            // if(scaleFactor * transform[0] < 0.1 || scaleFactor * transform[0] > 1.5){
+            //     return transform[0];
+            // }
+
             // Transform scroll point to clip-space coordinates:
             var cx = 2 * scrollPoint.x / width - 1,
                 cy = 1 - (2 * scrollPoint.y) / height;
@@ -274,6 +278,10 @@ function webglGraphics(options) {
             updateTransformUniform();
             fireRescaled(this);
 
+            return transform[0];
+        },
+
+        getScale : function(){
             return transform[0];
         },
 
@@ -556,6 +564,36 @@ function webglGraphics(options) {
             p.y = ((1 - p.y) * height) / 2;
 
             return p;
+        },
+
+
+        /**
+         * grillion
+         * Reverse engineered transformClientToGraphCoordinates.
+         * Deprecated in favor of transformGraphToClientCoordinates
+         *
+         * @param graphicsRootPos
+         * @returns {{x: (number|*), y: (number|*), transform: number}}
+         */
+        transformGraphCoordinatesToClient : function (graphicsRootPos) {
+          console.warn('deprecated] use transformGraphToClientCoordinates');
+
+          var newX, newY, newerX, newerY, clientX, clientY;
+
+          newerX = graphicsRootPos.x / (width / 2);
+          newerY = graphicsRootPos.y / (-height / 2);
+
+          newX = newerX * transform[0] + transform[12];
+          newY = newerY * transform[5] + transform[13];
+
+          clientX = (newX + 1) / 2 * width;
+          clientY = ((newY * height) - height) / -2;
+
+          return {
+            x: clientX,
+            y: clientY,
+            transform: transform[0]
+          };
         },
 
         getNodeAtClientPos: function (clientPos, preciseCheck) {

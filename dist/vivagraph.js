@@ -4731,12 +4731,16 @@ function renderer(graph, settings) {
       return this;
     },
 
-    zoomOut: function() {
-      return scale(true);
+    scale: function(inOut){
+      return scale(inOut);
     },
 
-    zoomIn: function() {
-      return scale(false);
+    zoomOut: function(desiredScale) {
+      return zoomOut(desiredScale);
+    },
+
+    zoomIn: function(desiredScale) {
+      return zoomIn(desiredScale);
     },
 
     /**
@@ -4761,6 +4765,9 @@ function renderer(graph, settings) {
       return graphics;
     },
     
+    /**
+     * Gets current layout.
+     */
     getLayout: function() {
       return layout;
     },
@@ -5088,6 +5095,26 @@ function renderer(graph, settings) {
     layout.dispose();
     releaseDom();
   }
+
+  function zoomOut(desiredScale) {
+    var currentScale = graphics.getScale();
+    if (desiredScale < currentScale && currentScale > 0.12) {
+      setTimeout(function () {
+        scale(true);
+        this.zoomOut(desiredScale);
+      }, 16);
+    }
+  }
+
+  function zoomIn(desiredScale) {
+    var currentScale = graphics.getScale();
+    if (desiredScale < currentScale && currentScale > 0.12) {
+      setTimeout(function () {
+        scale(false);
+        this.zoomIn(desiredScale);
+      }, 16);
+    }
+  }
 }
 
 },{"../Input/domInputManager.js":38,"../Input/dragndrop.js":39,"../Utils/getDimensions.js":46,"../Utils/timer.js":50,"../Utils/windowEvents.js":51,"./svgGraphics.js":53,"ngraph.events":9,"ngraph.forcelayout":11}],53:[function(require,module,exports){
@@ -5281,6 +5308,10 @@ function svgGraphics() {
             svgContainer.attr("transform", transform);
 
             fireRescaled(this);
+            return actualScale;
+        },
+
+        getScale : function(){
             return actualScale;
         },
 
@@ -5709,6 +5740,10 @@ function webglGraphics(options) {
         },
 
         scale : function (scaleFactor, scrollPoint) {
+            // if(scaleFactor * transform[0] < 0.1 || scaleFactor * transform[0] > 1.5){
+            //     return transform[0];
+            // }
+
             // Transform scroll point to clip-space coordinates:
             var cx = 2 * scrollPoint.x / width - 1,
                 cy = 1 - (2 * scrollPoint.y) / height;
@@ -5725,6 +5760,10 @@ function webglGraphics(options) {
             updateTransformUniform();
             fireRescaled(this);
 
+            return transform[0];
+        },
+
+        getScale : function(){
             return transform[0];
         },
 
@@ -6009,6 +6048,36 @@ function webglGraphics(options) {
             return p;
         },
 
+
+        /**
+         * grillion
+         * Reverse engineered transformClientToGraphCoordinates.
+         * Deprecated in favor of transformGraphToClientCoordinates
+         *
+         * @param graphicsRootPos
+         * @returns {{x: (number|*), y: (number|*), transform: number}}
+         */
+        transformGraphCoordinatesToClient : function (graphicsRootPos) {
+          console.warn('deprecated] use transformGraphToClientCoordinates');
+
+          var newX, newY, newerX, newerY, clientX, clientY;
+
+          newerX = graphicsRootPos.x / (width / 2);
+          newerY = graphicsRootPos.y / (-height / 2);
+
+          newX = newerX * transform[0] + transform[12];
+          newY = newerY * transform[5] + transform[13];
+
+          clientX = (newX + 1) / 2 * width;
+          clientY = ((newY * height) - height) / -2;
+
+          return {
+            x: clientX,
+            y: clientY,
+            transform: transform[0]
+          };
+        },
+
         getNodeAtClientPos: function (clientPos, preciseCheck) {
             if (typeof preciseCheck !== "function") {
                 // we don't know anything about your node structure here :(
@@ -6195,7 +6264,7 @@ module.exports = webglAtlas;
  */
 function webglAtlas(tilesPerTexture) {
   var tilesPerRow = Math.sqrt(tilesPerTexture || 1024) << 0,
-    tileSize = tilesPerRow,
+    tileSize = 256, // grillion - changed from tilesPerRow value
     lastLoadedIdx = 1,
     loadedImages = {},
     dirtyTimeoutId,
@@ -6300,6 +6369,12 @@ function webglAtlas(tilesPerTexture) {
 
       lastLoadedIdx += 1;
       img.crossOrigin = "anonymous";
+
+      // grillion - use object
+      loadedImages[imgUrl] = {
+        offset: imgId
+      };
+
       img.onload = function() {
         markDirty();
         drawAt(imgId, img, callback);
@@ -6309,9 +6384,19 @@ function webglAtlas(tilesPerTexture) {
     }
   }
 
-  function createTexture() {
+  // grillion - deprecated version
+  // function createTexture() {
+  //   var texture = new Texture(tilesPerRow * tileSize);
+  //   textures.push(texture);
+  // }
+  // updated version can specify index
+  function createTexture(index) {
     var texture = new Texture(tilesPerRow * tileSize);
-    textures.push(texture);
+    if(index === undefined){
+      textures.push(texture);
+    }else{
+      textures[index] = texture;
+    }
   }
 
   function drawAt(tileNumber, img, callback) {
@@ -6320,15 +6405,22 @@ function webglAtlas(tilesPerTexture) {
         offset: tileNumber
       };
 
-    if (tilePosition.textureNumber >= textures.length) {
-      createTexture();
+    // grillion - deprecated version
+    // if (tilePosition.textureNumber >= textures.length) {
+    //   createTexture();
+    // }
+    // new version reuses images
+    loadedImages[img.src] = coordinates;
+    if (textures[tilePosition.textureNumber] === undefined) {
+      createTexture(tilePosition.textureNumber);
     }
     var currentTexture = textures[tilePosition.textureNumber];
 
     currentTexture.ctx.drawImage(img, tilePosition.col * tileSize, tilePosition.row * tileSize, tileSize, tileSize);
     trackedUrls[tileNumber] = img.src;
 
-    loadedImages[img.src] = coordinates;
+    // grillion - deprecated
+    //loadedImages[img.src] = coordinates;
     currentTexture.isDirty = true;
 
     callback(coordinates);
@@ -6373,7 +6465,8 @@ function webglAtlas(tilesPerTexture) {
       toCtx = textures[to.textureNumber].ctx,
       x = to.col * tileSize,
       y = to.row * tileSize;
-
+    
+    //this is broken and is writing over images with transparency and stacking images
     toCtx.drawImage(fromCanvas, from.col * tileSize, from.row * tileSize, tileSize, tileSize, x, y, tileSize, tileSize);
     textures[from.textureNumber].isDirty = true;
     textures[to.textureNumber].isDirty = true;
@@ -6437,7 +6530,7 @@ function webglImageNodeProgram() {
   var ATTRIBUTES_PER_PRIMITIVE = 18;
   var nodesFS = createNodeFragmentShader();
   var nodesVS = createNodeVertexShader();
-  var tilesPerTexture = 1024; // TODO: Get based on max texture size
+  var tilesPerTexture = 64; // TODO: Get based on max texture size
   var atlas;
   var program;
   var gl;
@@ -6445,6 +6538,7 @@ function webglImageNodeProgram() {
   var utils;
   var locations;
   var nodesCount = 0;
+  var imageReuse = {};
   var nodes = new Float32Array(64);
   var width;
   var height;
@@ -6560,8 +6654,10 @@ function webglImageNodeProgram() {
     var coordinates = atlas.getCoordinates(ui.src);
     if (coordinates) {
       ui._offset = coordinates.offset;
+      imageReuse[ui.src] = 1;
     } else {
       ui._offset = 0;
+      imageReuse[ui.src] = imageReuse[ui.src] + 1;
       // Image is not yet loaded into the atlas. Reload it:
       atlas.load(ui.src, function(coordinates) {
         ui._offset = coordinates.offset;
@@ -6574,10 +6670,18 @@ function webglImageNodeProgram() {
       nodesCount -= 1;
     }
 
-    if (nodeUI.id < nodesCount && nodesCount > 0) {
-      if (nodeUI.src) {
-        atlas.remove(nodeUI.src);
+    if (nodeUI.src) {
+      imageReuse[nodeUI.src] = imageReuse[nodeUI.src] - 1;
+      if(imageReuse[nodeUI.src] === 0){
+        //atlas.remove(nodeUI.src);
       }
+    }
+
+    //grillion - this is broken
+    if (nodeUI.id < nodesCount && nodesCount > 0) {
+      // if (nodeUI.src) {
+      //   atlas.remove(nodeUI.src);
+      // }
 
       utils.copyArrayPart(nodes, nodeUI.id * ATTRIBUTES_PER_PRIMITIVE, nodesCount * ATTRIBUTES_PER_PRIMITIVE, ATTRIBUTES_PER_PRIMITIVE);
     }
@@ -6872,9 +6976,9 @@ function webglInputEvents(webglGraphics) {
 
         if (node && lastFound !== node) {
           lastFound = node;
-          cancelBubble = cancelBubble || invoke(mouseEnterCallback, [lastFound]);
+          cancelBubble = cancelBubble || invoke(mouseEnterCallback, [lastFound,e]);
         } else if (node === null && lastFound !== node) {
-          cancelBubble = cancelBubble || invoke(mouseLeaveCallback, [lastFound]);
+          cancelBubble = cancelBubble || invoke(mouseLeaveCallback, [lastFound,e]);
           lastFound = null;
         }
 
@@ -7002,6 +7106,7 @@ function webglLinkProgram() {
 
         program,
         gl,
+        glAliasedLineWidthRange,
         buffer,
         utils,
         locations,
@@ -7034,6 +7139,7 @@ function webglLinkProgram() {
     return {
         load : function (glContext) {
             gl = glContext;
+            glAliasedLineWidthRange = gl.getParameter( gl.ALIASED_LINE_WIDTH_RANGE)[1];
             utils = glUtils(glContext);
 
             program = utils.createProgram(linksVS, linksFS);
@@ -7099,6 +7205,8 @@ function webglLinkProgram() {
             gl.vertexAttribPointer(locations.vertexPos, 2, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
             gl.vertexAttribPointer(locations.color, 4, gl.UNSIGNED_BYTE, true, 3 * Float32Array.BYTES_PER_ELEMENT, 2 * 4);
 
+            // grillion - set to 2 if available
+            gl.lineWidth((glAliasedLineWidthRange > 1) ? 2 : 1);
             gl.drawArrays(gl.LINES, 0, linksCount * 2);
 
             frontLinkId = linksCount - 1;
@@ -7312,7 +7420,7 @@ function webglSquare(size, color) {
 
 },{"./parseColor.js":55}],66:[function(require,module,exports){
 // todo: this should be generated at build time.
-module.exports = '0.8.1';
+module.exports = '0.10.1-grillion';
 
 },{}]},{},[1])(1)
 });
